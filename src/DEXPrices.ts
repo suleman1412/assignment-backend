@@ -1,11 +1,10 @@
 import axios from 'axios';
+import { tokens } from './token';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const JUPI_API_URL = 'https://api.jup.ag/price/v2';
-
-const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112'; // SOL on Solana
-const USDC_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC on Solana
+const JUPI_API_URL = process.env.JUPI_API_URL;
 const USDT_MINT_ADDRESS = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-
 
 type JupiterPriceResponse = {
     data: {
@@ -17,9 +16,10 @@ type JupiterPriceResponse = {
     };
     timeTaken: number;
 };
+
 const fetchJupiterPrice = async (tokenMintAddress: string): Promise<number | null> => {
     try {
-        const response = await axios.get<JupiterPriceResponse>(JUPI_API_URL, {
+        const response = await axios.get<JupiterPriceResponse>(JUPI_API_URL!, {
             params: { 
                 ids: tokenMintAddress,
                 vsToken : USDT_MINT_ADDRESS
@@ -35,13 +35,12 @@ const fetchJupiterPrice = async (tokenMintAddress: string): Promise<number | nul
 
 const pollJupiterPrices = async () => {
     setInterval(async () => {
-        const solPrice = await fetchJupiterPrice(SOL_MINT_ADDRESS);
-        const usdcPrice = await fetchJupiterPrice(USDC_MINT_ADDRESS);
-
-        console.log(`SOL/USDT Price: $${solPrice}`);
-        console.log(`USDC/USDT Price: $${usdcPrice}`);
+        for (const token of tokens){
+            const price = await fetchJupiterPrice(token.mintAddress)
+            console.log(`DEX ${token.binanceSymbol} : ${price}`)
+        }
     }, 1 * 1000); 
 };
 
 // pollJupiterPrices()
-export { fetchJupiterPrice, pollJupiterPrices };
+export { fetchJupiterPrice };

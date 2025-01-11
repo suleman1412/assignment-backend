@@ -1,13 +1,12 @@
-import { binanceSolPrice, binanceUsdcPrice } from './CEXPrices';
+import { binancePrices } from './CEXPrices';
 import { fetchJupiterPrice } from './DEXPrices';
+import { tokens } from './token';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Fee Constants
-const BINANCE_FEE = 0.001;
-const JUPITER_FEE = 0.003; 
-
-// MINT ADDRESSES
-const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112'; // SOL on Solana
-const USDC_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC on Solana
+const BINANCE_FEE = 0.001; // 0.1% fee
+const JUPITER_FEE = 0.003; // 0.3% fee
 
 const calculateArbitrage = (binancePrice: number, jupiterPrice: number) => {
   const effectiveBinancePrice = binancePrice * (1 + BINANCE_FEE);
@@ -16,18 +15,23 @@ const calculateArbitrage = (binancePrice: number, jupiterPrice: number) => {
 };
 
 const checkArbitrage = async () => {
-  const jupiterSolPrice = await fetchJupiterPrice(SOL_MINT_ADDRESS);
-  const jupiterUSDCPrice = await fetchJupiterPrice(USDC_MINT_ADDRESS);
-  
-  if (binanceSolPrice && jupiterSolPrice) {
-    const profit = calculateArbitrage(binanceSolPrice, jupiterSolPrice);
-    console.log(`SOL Arbitrage Opportunity: Profit = $${profit.toFixed(4)}`);
-  }
-  
-  if (binanceUsdcPrice && jupiterUSDCPrice) {
-    const profit = calculateArbitrage(binanceUsdcPrice, jupiterUSDCPrice);
-    console.log(`USDC Arbitrage Opportunity: Profit = $${profit.toFixed(4)}`);
+  for (const token of tokens) {
+    const { symbol, mintAddress, binanceSymbol } = token;
+
+    try {
+      const jupiterPrice = await fetchJupiterPrice(mintAddress);
+
+      const binancePrice = binancePrices[binanceSymbol];
+      if (binancePrice && jupiterPrice) {
+        const profit = calculateArbitrage(binancePrice, jupiterPrice);
+        console.log(`🚀 ${symbol} Arbitrage Opportunity: Profit = $${profit.toFixed(4)}`);
+      } else {
+        console.log('Missing values')
+      }
+    } catch (error) {
+      console.error(`Error checking arbitrage for ${symbol}:`, error);
+    }
   }
 };
 
-setInterval(checkArbitrage, 10 * 1000);
+setInterval(checkArbitrage, 1 * 1000);

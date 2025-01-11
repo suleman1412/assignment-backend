@@ -1,23 +1,53 @@
 import WebSocket from 'ws';
+import { tokens } from './token';
+import dotenv from 'dotenv';
 
-const BINANCE_WS_URL = 'wss://stream.binance.com:9443/ws';
+dotenv.config();
 
-let binanceSolPrice: number | null = null;
-let binanceUsdcPrice: number | null = null;
+const BINANCE_WS_URL = process.env.BINANCE_WS_URL || 'wss://stream.binance.com:9443/ws';
 
-const binanceSolWebSocket = new WebSocket(`${BINANCE_WS_URL}/solusdt@ticker`);
-binanceSolWebSocket.on('message', (data) => {
+const binancePrices: { [symbol: string]: number | null } = {};
+
+// Track existing WebSocket connections
+const existingSymbols: Set<string> = new Set();
+
+// Set up WebSocket for a symbol and store its price
+const setupBinanceWebSocket = (symbol: string) => {
+  if (existingSymbols.has(symbol)) {
+    return; // Avoid duplicate connections
+  }
+
+  const binanceSymbol = symbol.toLowerCase();
+  const binanceWebSocket = new WebSocket(`${BINANCE_WS_URL}/${binanceSymbol}@ticker`);
+
+  binanceWebSocket.on('message', (data) => {
     const ticker = JSON.parse(data.toString());
-    binanceSolPrice = parseFloat(ticker.c); 
-    // console.log(`Binance SOL/USDT Price: $${binanceSolPrice}`);
-});
+    binancePrices[symbol] = parseFloat(ticker.c); 
+    // console.log(`Binance ${symbol}: $${binancePrices[symbol]}`);
+  });
 
-const binanceUsdcWebSocket = new WebSocket(`${BINANCE_WS_URL}/usdcusdt@ticker`);
-binanceUsdcWebSocket.on('message', (data) => {
-    const ticker = JSON.parse(data.toString());
-    binanceUsdcPrice = parseFloat(ticker.c); 
-    // console.log(`Binance USDC/USDT Price: $${binanceUsdcPrice}`);
-});
+  binanceWebSocket.on('error', (error) => {
+    console.error(`WebSocket error for ${symbol}:`, error);
+  });
 
+  binanceWebSocket.on('close', () => {
+    console.log(`WebSocket closed for ${symbol}. Reconnecting...`);
+    existingSymbols.delete(symbol); // Allow reconnection
+    setupBinanceWebSocket(symbol); 
+  });
 
-export { binanceSolPrice, binanceUsdcPrice };
+  existingSymbols.add(symbol); // Mark symbol as connected
+};
+
+// Poll Binance prices for all tokens
+const pollBinancePrices = () => {
+  for (const token of tokens) {
+    setupBinanceWebSocket(token.binanceSymbol); // Set up WebSocket for each token
+  }
+};
+
+// Start polling Binance prices
+pollBinancePrices();
+
+// Export the prices object
+export { binancePrices };
