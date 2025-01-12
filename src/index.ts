@@ -19,7 +19,7 @@ const JUPITER_FEE = 0.003; // 0.3% fee
 const calculateArbitrage = (binancePrice:number, jupiterPrice:number) => {
   const effectiveBinancePrice = binancePrice * (1 + BINANCE_FEE);
   const effectiveJupiterPrice = jupiterPrice * (1 - JUPITER_FEE);
-  return effectiveJupiterPrice - effectiveBinancePrice;
+  return effectiveBinancePrice - effectiveJupiterPrice;
 };
 
 // Set up WebSocket server
@@ -53,10 +53,11 @@ const checkArbitrage = async () => {
           symbol,
           profit: parseFloat(profit.toFixed(4)),
         };
-        console.log(`🚀 ${symbol} Arbitrage Opportunity: Profit = $${profit.toFixed(4)}`);
+        if(profit > 0){
+          console.log(`${symbol} Arbitrage Opportunity: Profit = $${profit.toFixed(4)}`);
+          broadcastData(result);
+        }
 
-        // Broadcast to WebSocket clients
-        broadcastData(result);
       } else {
         console.log('Missing values');
       }
