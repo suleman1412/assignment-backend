@@ -118,11 +118,6 @@ const JUPITER_FEE = 0.003; // 0.3% fee
 
 ---
 
-## Contributing
-
-Contributions are welcome! Please fork the repository, make your changes, and open a pull request.
-
----
 
 ## License
 
